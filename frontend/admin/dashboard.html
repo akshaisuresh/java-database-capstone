@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard – SmartCare</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    .sidebar {
+      width: 240px; position: fixed; top: 0; left: 0; height: 100vh;
+      background: #1a237e; color: #fff; padding: 24px 0;
+    }
+    .sidebar .brand { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar .brand h2 { font-size: 1.2rem; }
+    .sidebar .brand small { opacity: 0.6; font-size: 0.78rem; }
+    .sidebar nav a {
+      display: block; padding: 13px 24px; color: rgba(255,255,255,0.8);
+      text-decoration: none; font-size: 0.92rem; transition: background 0.15s;
+    }
+    .sidebar nav a:hover, .sidebar nav a.active { background: rgba(255,255,255,0.12); color: #fff; }
+    .main { margin-left: 240px; padding: 32px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .topbar h1 { font-size: 1.5rem; color: #1a237e; }
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: #fff; border-radius: 12px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .stat-card .label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: #1a237e; margin-top: 6px; }
+    .panel {
+      background: #fff; border-radius: 12px; padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 24px;
+    }
+    .panel h2 { font-size: 1.1rem; color: #1a237e; margin-bottom: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    label { display: block; font-size: 0.82rem; color: #555; margin-bottom: 5px; font-weight: 500; }
+    input, select {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #ddd;
+      border-radius: 8px; font-size: 0.9rem;
+    }
+    input:focus, select:focus { outline: none; border-color: #3949ab; }
+    .btn-primary {
+      padding: 11px 28px; background: #1a237e; color: #fff;
+      border: none; border-radius: 8px; font-size: 0.95rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .btn-primary:hover { background: #283593; }
+    .toast {
+      display: none; padding: 12px 18px; border-radius: 8px;
+      margin-bottom: 16px; font-size: 0.9rem;
+    }
+    .toast.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .toast.error   { background: #ffebee; color: #c62828; display: block; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 12px; font-size: 0.8rem;
+         text-transform: uppercase; color: #888; border-bottom: 2px solid #f0f2f5; }
+    td { padding: 12px; font-size: 0.9rem; border-bottom: 1px solid #f5f5f5; }
+    .badge-role {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600;
+    }
+    .badge-role.doctor { background: #e0f2f1; color: #00695c; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>SmartCare</h2>
+      <small>Admin Portal</small>
+    </div>
+    <nav>
+      <a href="#" class="active">Dashboard</a>
+      <a href="#add-doctor">Add Doctor</a>
+      <a href="#doctors-list">Manage Doctors</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Admin Dashboard</h1>
+      <span style="color:#888;font-size:0.9rem;">Welcome, Admin</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="label">Total Doctors</div><div class="value" id="statDoctors">–</div></div>
+      <div class="stat-card"><div class="label">Total Patients</div><div class="value">–</div></div>
+      <div class="stat-card"><div class="label">Today's Appts</div><div class="value">–</div></div>
+      <div class="stat-card"><div class="label">Pending</div><div class="value">–</div></div>
+    </div>
+
+    <!-- Add Doctor Panel -->
+    <div class="panel" id="add-doctor">
+      <h2>➕ Add New Doctor</h2>
+      <div id="toast" class="toast"></div>
+      <div class="form-row">
+        <div>
+          <label>Full Name</label>
+          <input type="text" id="docName" placeholder="Dr. Jane Smith" />
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" id="docEmail" placeholder="jane@smartcare.com" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Specialization</label>
+          <select id="docSpec">
+            <option>Cardiology</option>
+            <option>Dermatology</option>
+            <option>General Practice</option>
+            <option>Neurology</option>
+            <option>Orthopedics</option>
+            <option>Pediatrics</option>
+            <option>Psychiatry</option>
+          </select>
+        </div>
+        <div>
+          <label>Phone</label>
+          <input type="tel" id="docPhone" placeholder="+1 555 000 0000" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Temporary Password</label>
+          <input type="password" id="docPassword" placeholder="Set initial password" />
+        </div>
+        <div>
+          <label>Available Times (comma-separated)</label>
+          <input type="text" id="docTimes" placeholder="09:00,10:00,11:00,14:00" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addDoctor()">Add Doctor to System</button>
+    </div>
+
+    <!-- Doctors Table -->
+    <div class="panel" id="doctors-list">
+      <h2>👨‍⚕️ Registered Doctors</h2>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Specialization</th><th>Role</th></tr>
+        </thead>
+        <tbody id="doctorTableBody">
+          <tr><td colspan="4" style="color:#aaa;text-align:center;padding:20px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    async function loadDoctors() {
+      try {
+        const res = await fetch('http://localhost:8080/api/doctors', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const doctors = await res.json();
+        document.getElementById('statDoctors').textContent = doctors.length;
+        const tbody = document.getElementById('doctorTableBody');
+        tbody.innerHTML = doctors.map(d => `
+          <tr>
+            <td>${d.fullName}</td>
+            <td>${d.user?.email || '–'}</td>
+            <td>${d.specialization}</td>
+            <td><span class="badge-role doctor">Doctor</span></td>
+          </tr>`).join('');
+      } catch { /* backend offline */ }
+    }
+
+    async function addDoctor() {
+      const toast = document.getElementById('toast');
+      toast.className = 'toast';
+      const payload = {
+        fullName:       document.getElementById('docName').value,
+        email:          document.getElementById('docEmail').value,
+        specialization: document.getElementById('docSpec').value,
+        phone:          document.getElementById('docPhone').value,
+        password:       document.getElementById('docPassword').value,
+        availableTimes: document.getElementById('docTimes').value.split(',').map(s => s.trim())
+      };
+
+      try {
+        const res = await fetch('http://localhost:8080/api/admin/doctors', {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          toast.textContent = `✅ Doctor "${payload.fullName}" added successfully!`;
+          toast.className = 'toast success';
+          loadDoctors();
+        } else {
+          toast.textContent = '❌ Failed to add doctor. Check all fields.';
+          toast.className = 'toast error';
+        }
+      } catch {
+        toast.textContent = '⚠️ Server unreachable.';
+        toast.className = 'toast error';
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+
+    loadDoctors();
+  </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Dashboard – SmartCare</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #fdf0f5; }
+    .sidebar {
+      width: 240px; position: fixed; top: 0; left: 0; height: 100vh;
+      background: #880e4f; color: #fff; padding: 24px 0;
+    }
+    .sidebar .brand { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar nav a {
+      display: block; padding: 13px 24px; color: rgba(255,255,255,0.8);
+      text-decoration: none; font-size: 0.92rem; transition: background 0.15s;
+    }
+    .sidebar nav a:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .main { margin-left: 240px; padding: 32px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .topbar h1 { font-size: 1.5rem; color: #880e4f; }
+    .panel {
+      background: #fff; border-radius: 12px; padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 24px;
+    }
+    .panel h2 { font-size: 1.1rem; color: #880e4f; margin-bottom: 20px; }
+    .search-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    .search-row input {
+      flex: 1; padding: 11px 14px; border: 1.5px solid #ddd;
+      border-radius: 8px; font-size: 0.95rem;
+    }
+    .search-row input:focus { outline: none; border-color: #c2185b; }
+    .btn-pink { padding: 11px 22px; background: #880e4f; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-pink:hover { background: #ad1457; }
+    .doctor-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
+    .doctor-card {
+      border: 1.5px solid #f8bbd0; border-radius: 10px; padding: 18px;
+      transition: box-shadow 0.2s;
+    }
+    .doctor-card:hover { box-shadow: 0 4px 16px rgba(136,14,79,0.12); }
+    .doctor-card h3 { color: #880e4f; font-size: 1rem; margin-bottom: 4px; }
+    .doctor-card .spec { font-size: 0.82rem; color: #888; margin-bottom: 10px; }
+    .doctor-card .phone { font-size: 0.85rem; color: #555; }
+    .book-btn {
+      margin-top: 12px; width: 100%; padding: 9px; background: #fce4ec;
+      color: #880e4f; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;
+    }
+    .book-btn:hover { background: #f48fb1; color: #fff; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 12px; font-size: 0.8rem;
+         text-transform: uppercase; color: #888; border-bottom: 2px solid #fdf0f5; }
+    td { padding: 12px; font-size: 0.9rem; border-bottom: 1px solid #f5f5f5; }
+    .status {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600;
+    }
+    .status.CONFIRMED { background: #e8f5e9; color: #2e7d32; }
+    .status.PENDING   { background: #fff8e1; color: #f57f17; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>SmartCare</h2>
+      <small>Patient Portal</small>
+    </div>
+    <nav>
+      <a href="#find-doctor">Find a Doctor</a>
+      <a href="#my-appointments">My Appointments</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Patient Dashboard</h1>
+      <span style="color:#888;font-size:0.9rem;">Welcome back!</span>
+    </div>
+
+    <!-- Find Doctor Panel -->
+    <div class="panel" id="find-doctor">
+      <h2>🔍 Search &amp; Find a Doctor by Name</h2>
+      <div class="search-row">
+        <input type="text" id="searchName" placeholder="Enter doctor name (e.g. Dr. Smith)..." />
+        <select id="searchSpec" style="padding:11px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9rem;">
+          <option value="">All Specializations</option>
+          <option>Cardiology</option>
+          <option>Dermatology</option>
+          <option>General Practice</option>
+          <option>Neurology</option>
+          <option>Orthopedics</option>
+          <option>Pediatrics</option>
+        </select>
+        <button class="btn-pink" onclick="searchDoctors()">Search</button>
+      </div>
+      <div class="doctor-cards" id="doctorCards">
+        <p style="color:#aaa;font-size:0.9rem;">Search for a doctor above to see results.</p>
+      </div>
+    </div>
+
+    <!-- My Appointments Panel -->
+    <div class="panel" id="my-appointments">
+      <h2>📋 My Appointments</h2>
+      <table>
+        <thead>
+          <tr><th>Doctor</th><th>Specialization</th><th>Date &amp; Time</th><th>Status</th></tr>
+        </thead>
+        <tbody id="apptBody">
+          <tr><td colspan="4" style="color:#aaa;text-align:center;padding:20px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const token     = localStorage.getItem('token');
+    const patientId = localStorage.getItem('patientId');
+    if (!token) window.location.href = 'login.html';
+
+    async function searchDoctors() {
+      const name = document.getElementById('searchName').value.trim();
+      const spec = document.getElementById('searchSpec').value;
+      const cards = document.getElementById('doctorCards');
+      cards.innerHTML = '<p style="color:#aaa;">Searching...</p>';
+
+      try {
+        let url = 'http://localhost:8080/api/doctors';
+        if (spec) url += `?specialization=${encodeURIComponent(spec)}`;
+
+        const res     = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        let doctors   = await res.json();
+
+        if (name) {
+          doctors = doctors.filter(d => d.fullName.toLowerCase().includes(name.toLowerCase()));
+        }
+
+        if (!doctors.length) {
+          cards.innerHTML = '<p style="color:#aaa;">No doctors found matching your search.</p>';
+          return;
+        }
+
+        cards.innerHTML = doctors.map(d => `
+          <div class="doctor-card">
+            <h3>${d.fullName}</h3>
+            <div class="spec">${d.specialization}</div>
+            <div class="phone">${d.phone || 'No phone listed'}</div>
+            <button class="book-btn" onclick="bookAppointment(${d.id}, '${d.fullName}')">
+              📅 Book Appointment
+            </button>
+          </div>`).join('');
+      } catch {
+        cards.innerHTML = '<p style="color:#e53935;">Failed to load. Is the backend running?</p>';
+      }
+    }
+
+    async function bookAppointment(doctorId, name) {
+      const time = prompt(`Enter appointment time for ${name} (YYYY-MM-DDTHH:MM):`);
+      if (!time) return;
+      try {
+        const res = await fetch('http://localhost:8080/api/appointments', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ doctor: { id: doctorId }, patient: { id: patientId }, appointmentTime: time })
+        });
+        if (res.ok) { alert('Appointment booked!'); loadMyAppointments(); }
+        else alert('Booking failed.');
+      } catch { alert('Server error.'); }
+    }
+
+    async function loadMyAppointments() {
+      const tbody = document.getElementById('apptBody');
+      try {
+        const res   = await fetch(`http://localhost:8080/api/appointments/patient/${patientId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const appts = await res.json();
+        if (!appts.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="color:#aaa;text-align:center;padding:20px;">No appointments yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = appts.map(a => `
+          <tr>
+            <td>${a.doctor?.fullName || '–'}</td>
+            <td>${a.doctor?.specialization || '–'}</td>
+            <td>${new Date(a.appointmentTime).toLocaleString()}</td>
+            <td><span class="status ${a.status}">${a.status}</span></td>
+          </tr>`).join('');
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:#e53935;text-align:center;padding:20px;">Failed to load.</td></tr>';
+      }
+    }
+
+    function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+    loadMyAppointments();
+  </script>
+</body>
+</html>
